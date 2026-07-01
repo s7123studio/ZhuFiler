@@ -1,22 +1,15 @@
 package zhu.filer
 
-import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.RippleDrawable
 import android.content.res.ColorStateList
+import android.graphics.drawable.RippleDrawable
 import android.os.Handler
 import android.os.Looper
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
-import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import android.widget.ListView
-import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -38,20 +31,20 @@ fun showNavigateDialog(activity: AppCompatActivity, currentDir: File, loadDir: s
 
     lateinit var dialog: AlertDialog
     val builder = MaterialAlertDialogBuilder(activity)
-        .setTitle("工作目录")
+        .setTitle(R.string.working_directory)
         .setView(rootLayout)
-        .setPositiveButton("切换") { _, _ ->
+        .setPositiveButton(R.string.action_switch) { _, _ ->
             val path = editText.text?.toString()?.trim() ?: ""
             if (path.isNotEmpty()) {
                 val targetDir = File(path)
                 if (targetDir.exists() && targetDir.isDirectory) {
                     activity.lifecycleScope.launch { loadDir(targetDir) }
                 } else {
-                    toast(activity, "目录无效")
+                    toast(activity, activity.getString(R.string.directory_invalid))
                 }
             }
         }
-        .setNeutralButton("最近") { _, _ ->
+        .setNeutralButton(R.string.recent) { _, _ ->
             val recent = getRecentDirs(prefs)
             val files = recent.map { File(it) }
             val items = files.map { file ->
@@ -75,12 +68,12 @@ fun showNavigateDialog(activity: AppCompatActivity, currentDir: File, loadDir: s
             }
 
             recentDialog = MaterialAlertDialogBuilder(activity)
-                .setTitle("最近")
+                .setTitle(R.string.recent)
                 .setView(rv)
-                .setNegativeButton("取消", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show()
         }
-        .setNegativeButton("取消", null)
+        .setNegativeButton(R.string.cancel, null)
     dialog = builder.show()
     focusAndShowKeyboard(editText, dialog)
     editText.post { editText.selectAll() }
@@ -95,31 +88,31 @@ fun showCreate(activity: AppCompatActivity, currentDir: File, loadDir: suspend (
     rootLayout.addView(inputLayout)
 
     MaterialAlertDialogBuilder(activity)
-        .setTitle("创建")
+        .setTitle(R.string.create)
         .setView(rootLayout)
-        .setPositiveButton("文件") { _, _ ->
+        .setPositiveButton(R.string.file) { _, _ ->
             val name = edit.text?.toString()?.trim() ?: ""
             if (isValid(name)) {
                 val f = File(currentDir, name)
                 activity.lifecycleScope.launch {
                     val ok = withContext(Dispatchers.IO) { f.createNewFile() }
-                    if (!ok) toast(activity, "创建失败")
+                    if (!ok) toast(activity, activity.getString(R.string.create_failed))
                     if (ok) loadDir(currentDir)
                 }
-            } else toast(activity, "名称无效")
+            } else toast(activity, activity.getString(R.string.invalid_characters))
         }
-        .setNegativeButton("目录") { _, _ ->
+        .setNegativeButton(R.string.directory) { _, _ ->
             val name = edit.text?.toString()?.trim() ?: ""
             if (isValid(name)) {
                 val d = File(currentDir, name)
                 activity.lifecycleScope.launch {
                     val ok = withContext(Dispatchers.IO) { d.mkdir() }
-                    if (!ok) toast(activity, "创建失败")
+                    if (!ok) toast(activity, activity.getString(R.string.create_failed))
                     if (ok) loadDir(currentDir)
                 }
-            } else toast(activity, "名称无效")
+            } else toast(activity, activity.getString(R.string.invalid_characters))
         }
-        .setNeutralButton("取消", null)
+        .setNeutralButton(R.string.cancel, null)
         .show()
         .let { focusAndShowKeyboard(edit, it) }
 }
@@ -141,37 +134,37 @@ fun showRenameDialog(activity: AppCompatActivity, currentDir: File, loadDir: sus
     }
 
     MaterialAlertDialogBuilder(activity)
-        .setTitle("重命名")
+        .setTitle(R.string.rename)
         .setView(rootLayout)
-        .setPositiveButton("确定") { _, _ ->
+        .setPositiveButton(R.string.ok) { _, _ ->
             val newName = editText.text?.toString()?.trim() ?: ""
             when {
-                newName.isEmpty() -> toast(activity, "名称不能为空")
-                newName == oldName -> toast(activity, "名称未改变")
-                !isValid(newName) -> toast(activity, "包含非法字符")
+                newName.isEmpty() -> toast(activity, activity.getString(R.string.name_cannot_be_empty))
+                newName == oldName -> toast(activity, activity.getString(R.string.name_unchanged))
+                !isValid(newName) -> toast(activity, activity.getString(R.string.invalid_characters))
                 else -> {
                     val parent = file.parent ?: run {
-                        toast(activity, "无法重命名根目录")
+                        toast(activity, activity.getString(R.string.rename_failed))
                         return@setPositiveButton
                     }
                     val newFile = File(parent, newName)
                     if (newFile.exists()) {
-                        toast(activity, "同名文件已存在")
+                        toast(activity, activity.getString(R.string.file_exists))
                         return@setPositiveButton
                     }
                     activity.lifecycleScope.launch {
                         val ok = withContext(Dispatchers.IO) { file.renameTo(newFile) }
                         if (ok) {
-                            toast(activity, "重命名成功")
+                            toast(activity, activity.getString(R.string.rename_success))
                             loadDir(currentDir)
                         } else {
-                            toast(activity, "重命名失败")
+                            toast(activity, activity.getString(R.string.rename_failed))
                         }
                     }
                 }
             }
         }
-        .setNegativeButton("取消", null)
+        .setNegativeButton(R.string.cancel, null)
         .show()
         .let { focusAndShowKeyboard(editText, it) }
 }
@@ -182,39 +175,52 @@ fun showOps(
     loadDir: suspend (File) -> Unit,
     file: File,
     progressBar: android.widget.ProgressBar,
-    onCopyCut: (File, Boolean) -> Unit = { _, _ -> }
+    onCopyCut: (File, Boolean) -> Unit = { _, _ -> },
+    onBookmarkToggle: ((String) -> Unit)? = null,
+    isBookmarked: Boolean = false
 ) {
-    val items = mutableListOf("复制", "移动", "重命名", "删除")
+    val items = mutableListOf(
+        activity.getString(R.string.copy),
+        activity.getString(R.string.move),
+        activity.getString(R.string.rename),
+        activity.getString(R.string.delete)
+    )
     if (!file.isDirectory) {
-        items.add("打开方式")
-        items.add("分享")
+        items.add(activity.getString(R.string.open_with))
+        items.add(activity.getString(R.string.share))
     }
-    items.add("属性")
+    if (file.isDirectory && onBookmarkToggle != null) {
+        val bookmarkActionRes = if (isBookmarked) R.string.remove_bookmark else R.string.add_bookmark
+        items.add(activity.getString(bookmarkActionRes))
+    }
+    items.add(activity.getString(R.string.properties))
 
     val dialog = MaterialAlertDialogBuilder(activity)
         .setTitle(file.name)
         .setItems(items.toTypedArray()) { _, which ->
             val action = items[which]
             when (action) {
-                "重命名" -> showRenameDialog(activity, currentDir, loadDir, file)
-                "复制" -> onCopyCut(file, false)
-                "移动" -> onCopyCut(file, true)
-                "删除" -> {
-                    MaterialAlertDialogBuilder(activity).setTitle("删除").setMessage("确定删除 ${file.name} 吗？")
-                        .setPositiveButton("删除") { _, _ ->
+                activity.getString(R.string.rename) -> showRenameDialog(activity, currentDir, loadDir, file)
+                activity.getString(R.string.copy) -> onCopyCut(file, false)
+                activity.getString(R.string.move) -> onCopyCut(file, true)
+                activity.getString(R.string.delete) -> {
+                    MaterialAlertDialogBuilder(activity).setTitle(R.string.confirm_delete)
+                        .setMessage(activity.getString(R.string.delete_message, file.name))
+                        .setPositiveButton(R.string.delete) { _, _ ->
                             activity.lifecycleScope.launch {
                                 val ok = withContext(Dispatchers.IO) { if (file.isDirectory) file.deleteRecursively() else file.delete() }
-                                if (!ok) toast(activity, "删除失败")
+                                if (!ok) toast(activity, activity.getString(R.string.delete_failed))
                                 if (ok) loadDir(currentDir)
                             }
-                        }.setNegativeButton("取消", null).show()
+                        }.setNegativeButton(R.string.cancel, null).show()
                 }
-                "打开方式" -> previewFile(activity, file, forceChoose = true)
-                "分享" -> shareFile(activity, activity.packageName, file)
-                "属性" -> showDetails(activity, file)
+                activity.getString(R.string.open_with) -> previewFile(activity, file, forceChoose = true)
+                activity.getString(R.string.share) -> shareFile(activity, file)
+                activity.getString(R.string.add_bookmark), activity.getString(R.string.remove_bookmark) -> onBookmarkToggle?.invoke(file.absolutePath)
+                activity.getString(R.string.properties) -> showDetails(activity, file)
             }
         }
-        .setNegativeButton("取消", null)
+        .setNegativeButton(R.string.cancel, null)
         .create()
     dialog.show()
 }

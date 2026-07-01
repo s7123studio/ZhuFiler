@@ -1,6 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Base.AppTheme" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
-        <item name="android:statusBarColor">?attr/colorPrimaryContainer</item>
+    <style name="Base.AppTheme" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+    <style name="AppTheme" parent="Base.AppTheme">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
     </style>
-    <style name="AppTheme" parent="Base.AppTheme" />
+
+    <style name="ToolbarSubtitle" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textSize">13sp</item>
+    </style>
 </resources>

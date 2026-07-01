@@ -11,8 +11,8 @@ android {
         applicationId 'zhu.filer'
         minSdk 25
         targetSdk 35
-        versionCode 8
-        versionName "1.7"
+        versionCode 9
+        versionName "1.8"
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
@@ -20,10 +20,22 @@ android {
         viewBinding true
     }
 
+    signingConfigs {
+        release {
+            storeFile file("../artzhu.keystore")
+            storePassword "artzhu"
+            keyAlias "artzhukey"
+            keyPassword "artzhu"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+        }
         release {
             minifyEnabled true
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

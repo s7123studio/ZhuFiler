@@ -15,6 +15,8 @@ import android.view.inputmethod.InputMethodManager
 import android.webkit.MimeTypeMap
 import android.widget.ImageView
 import android.widget.ScrollView
+import android.widget.TableLayout
+import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -33,10 +35,35 @@ import java.util.*
 
 val textExts = setOf("txt", "log", "md", "json", "xml", "kt", "java", "c", "cpp", "py", "html", "css", "js")
 val imageExts = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
-val fileComparator = compareByDescending<File> { it.isDirectory }.thenBy { it.name.lowercase(Locale.ROOT) }
+
+enum class SortMode(val labelRes: Int) {
+    NAME(R.string.sort_by_name),
+    SIZE(R.string.sort_by_size),
+    DATE(R.string.sort_by_date)
+}
+
+fun getSortComparator(mode: SortMode): Comparator<File> {
+    val byDir = compareByDescending<File> { it.isDirectory }
+    return when (mode) {
+        SortMode.NAME -> byDir.thenBy { it.name.lowercase(Locale.ROOT) }
+        SortMode.SIZE -> byDir.thenByDescending { it.length() }
+        SortMode.DATE -> byDir.thenByDescending { it.lastModified() }
+    }
+}
 val CLICK_DELAY_MS = 100L
 val DATE_FORMAT = SimpleDateFormat("yy-MM-dd HH:mm", Locale.getDefault())
+val DETAILS_DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 const val TEXT_PREVIEW_MAX_BYTES = 1024 * 1024
+private const val PATH_DISPLAY_MAX_LEN = 20
+private const val RECENT_SEPARATOR = "|"
+private const val RECENT_MAX_COUNT = 10
+
+fun createFileItem(context: Context, file: File): FileItem {
+    val timeStr = DATE_FORMAT.format(Date(file.lastModified()))
+    val subtitle = if (file.isDirectory) timeStr else "$timeStr  ${Formatter.formatFileSize(context, file.length())}"
+    val iconRes = if (file.isDirectory) R.drawable.outline_folder_24 else R.drawable.outline_insert_drive_file_24
+    return FileItem(file, file.name, iconRes, subtitle)
+}
 
 fun toast(context: Context, msg: String, duration: Int = Toast.LENGTH_SHORT) {
     Toast.makeText(context, msg, duration).show()
@@ -87,28 +114,28 @@ fun getDirStats(dir: File): Pair<Int, Int> {
 
 fun getRecentDirs(prefs: SharedPreferences): List<String> {
     val str = prefs.getString("recent_dirs", "") ?: ""
-    return str.split("|").filter { it.isNotEmpty() }.take(10)
+    return str.split(RECENT_SEPARATOR).filter { it.isNotEmpty() }.take(RECENT_MAX_COUNT)
 }
 
 fun updateRecentDirs(prefs: SharedPreferences, path: String) {
     val current = getRecentDirs(prefs).toMutableList()
     current.remove(path)
     current.add(0, path)
-    while (current.size > 10) current.removeAt(current.size - 1)
-    prefs.edit().putString("recent_dirs", current.joinToString("|")).apply()
+    while (current.size > RECENT_MAX_COUNT) current.removeAt(current.size - 1)
+    prefs.edit().putString("recent_dirs", current.joinToString(RECENT_SEPARATOR)).apply()
 }
 
-fun shareFile(context: Context, packageName: String, file: File) {
+fun shareFile(context: Context, file: File) {
     try {
-        val uri = FileProvider.getUriForFile(context, "$packageName.fileprovider", file)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/octet-stream"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "分享 ${file.name}"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share) + " " + file.name))
     } catch (e: Exception) {
-        toast(context, "分享失败: ${e.message}")
+        toast(context, context.getString(R.string.share_failed, e.message))
     }
 }
 
@@ -126,20 +153,24 @@ fun openFileWithSystem(context: Context, file: File) {
             setDataAndType(uri, mimeType)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "打开方式"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.open_with)))
     } catch (e: Exception) {
-        toast(context, "无法打开: ${e.message}")
+        toast(context, context.getString(R.string.open_failed, e.message))
     }
 }
 
 fun previewFile(activity: AppCompatActivity, file: File, forceChoose: Boolean = false) {
-    if (!file.canRead()) { toast(activity, "无法读取"); return }
-    if (file.length() > 5 * 1024 * 1024) { toast(activity, "文件>5MB", Toast.LENGTH_LONG); return }
+    if (!file.canRead()) { toast(activity, activity.getString(R.string.cannot_read)); return }
+    if (file.length() > 5 * 1024 * 1024) { toast(activity, activity.getString(R.string.file_too_large), Toast.LENGTH_LONG); return }
     val ext = file.extension.lowercase(Locale.ROOT)
     if (forceChoose || (ext !in textExts && ext !in imageExts)) {
-        val options = listOf("系统", "文本", "图片")
+        val options = listOf(
+            activity.getString(R.string.open),
+            activity.getString(R.string.text),
+            activity.getString(R.string.image)
+        )
         val dialog = MaterialAlertDialogBuilder(activity)
-            .setTitle("打开方式")
+            .setTitle(R.string.open_with)
             .setItems(options.toTypedArray()) { _, which ->
                 when (which) {
                     0 -> openFileWithSystem(activity, file)
@@ -147,7 +178,7 @@ fun previewFile(activity: AppCompatActivity, file: File, forceChoose: Boolean = 
                     2 -> showImagePreview(activity, file)
                 }
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(R.string.cancel, null)
             .create()
         dialog.show()
         dialog.listView?.let { applySelectableEffectToListView(it) }
@@ -157,6 +188,14 @@ fun previewFile(activity: AppCompatActivity, file: File, forceChoose: Boolean = 
         ext in imageExts -> showImagePreview(activity, file)
         ext in textExts -> showTextPreview(activity, file)
     }
+}
+
+private fun showPreviewDialog(activity: AppCompatActivity, title: String, view: View) {
+    MaterialAlertDialogBuilder(activity)
+        .setTitle(title)
+        .setView(view)
+        .setPositiveButton(R.string.close, null)
+        .show()
 }
 
 fun showTextPreview(activity: AppCompatActivity, file: File) {
@@ -171,19 +210,19 @@ fun showTextPreview(activity: AppCompatActivity, file: File) {
                         sb.append(line).append('\n')
                         size += (line?.length ?: 0) + 1
                         if (size > TEXT_PREVIEW_MAX_BYTES) {
-                            sb.append("\n... (文件太大，仅显示前 1MB)")
+                            sb.append("\n... (${activity.getString(R.string.file_too_large_preview)})")
                             break
                         }
                     }
                     sb.toString()
                 }
-            }.getOrDefault("读取失败")
+            }.getOrDefault(activity.getString(R.string.read_failed))
         }
         val scrollView = ScrollView(activity).apply {
             isFillViewport = true
             if (content.isEmpty()) {
                 val tv = TextView(context).apply {
-                    text = "文件为空"
+                    text = activity.getString(R.string.file_empty)
                     textSize = 20f
                     setTextIsSelectable(false)
                     gravity = Gravity.CENTER
@@ -204,58 +243,81 @@ fun showTextPreview(activity: AppCompatActivity, file: File) {
                 addView(tv)
             }
         }
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(file.name)
-            .setView(scrollView)
-            .setPositiveButton("关闭", null).show()
+        showPreviewDialog(activity, file.name, scrollView)
     }
 }
 
 fun showImagePreview(activity: AppCompatActivity, file: File) {
     activity.lifecycleScope.launch {
         val bmp = withContext(Dispatchers.IO) { runCatching { BitmapFactory.decodeFile(file.absolutePath) }.getOrNull() }
-        if (bmp == null) { toast(activity, "图片加载失败"); return@launch }
+        if (bmp == null) { toast(activity, activity.getString(R.string.image_load_failed)); return@launch }
         val iv = ImageView(activity).apply {
             setImageBitmap(bmp)
             scaleType = ImageView.ScaleType.FIT_CENTER
             setPadding(dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16))
         }
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(file.name)
-            .setView(iv)
-            .setPositiveButton("关闭", null).show()
+        showPreviewDialog(activity, file.name, iv)
     }
 }
 
 fun showDetails(activity: AppCompatActivity, file: File) {
-    val info = buildString {
-        append("名称: ${file.name}\n")
-        append("类型: ${if (file.isDirectory) "目录" else "文件"}\n")
-        append("大小: ${Formatter.formatFileSize(activity, file.length())}\n")
-        append("修改: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(file.lastModified()))}\n")
-        if (file.isDirectory) {
-            val (dirs, files) = getDirStats(file)
-            append("目录: $dirs\n")
-            append("文件: $files\n")
+    val rows = mutableListOf<Pair<String, String>>()
+    rows.add(activity.getString(R.string.name_label) to file.name)
+    rows.add(activity.getString(R.string.path_label) to file.absolutePath)
+    rows.add(activity.getString(R.string.type_label) to if (file.isDirectory) activity.getString(R.string.directory) else activity.getString(R.string.file))
+    rows.add(activity.getString(R.string.size_label) to Formatter.formatFileSize(activity, file.length()))
+    rows.add(activity.getString(R.string.modified_label) to DETAILS_DATE_FORMAT.format(Date(file.lastModified())))
+    if (file.isDirectory) {
+        val (dirs, files) = getDirStats(file)
+        rows.add(activity.getString(R.string.dir_count_label) to dirs.toString())
+        rows.add(activity.getString(R.string.file_count_label) to files.toString())
+    }
+
+    val padding = dpToPx(activity, 16)
+    val table = TableLayout(activity).apply {
+        setPadding(padding, padding, padding, padding)
+        setColumnStretchable(1, true)
+    }
+    for ((label, value) in rows) {
+        val labelView = TextView(activity).apply {
+            text = label
+            setPadding(0, dpToPx(activity, 4), dpToPx(activity, 16), dpToPx(activity, 4))
+            textSize = 14f
+            layoutParams = TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT)
         }
+        val rippleBg = android.util.TypedValue().let { tv ->
+            if (activity.theme.resolveAttribute(android.R.attr.selectableItemBackground, tv, true))
+                androidx.core.content.ContextCompat.getDrawable(activity, tv.resourceId)
+            else null
+        }
+        val valueView = TextView(activity).apply {
+            text = value
+            setPadding(0, dpToPx(activity, 4), 0, dpToPx(activity, 4))
+            textSize = 14f
+            background = rippleBg
+            setSingleLine(false)
+            setOnLongClickListener {
+                val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("value", value))
+                toast(activity, activity.getString(R.string.copied_to_clipboard))
+                true
+            }
+            layoutParams = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val row = TableRow(activity).apply {
+            addView(labelView)
+            addView(valueView)
+        }
+        table.addView(row)
     }
-    val tv = TextView(activity).apply {
-        text = info
-        setTextIsSelectable(true)
-        setPadding(dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16), dpToPx(activity, 16))
-        textSize = 14f
-    }
+
     MaterialAlertDialogBuilder(activity)
-        .setTitle("属性")
-        .setView(tv)
-        .setPositiveButton("确定", null).show()
+        .setTitle(R.string.properties)
+        .setView(table)
+        .setPositiveButton(R.string.ok, null).show()
 }
 
 fun File.getDisplayPath(): String {
     val path = absolutePath
-    return if (path.length <= 20) {
-        path
-    } else {
-        "…" + path.takeLast(20)
-    }
+    return if (path.length <= PATH_DISPLAY_MAX_LEN) path else "…" + path.takeLast(PATH_DISPLAY_MAX_LEN)
 }

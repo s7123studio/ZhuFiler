@@ -19,6 +19,7 @@ class FileBrowserController(
     private val swipeRefreshLayout: SwipeRefreshLayout,
     private val prefs: android.content.SharedPreferences,
     private val showHiddenProvider: () -> Boolean,
+    private val sortModeProvider: () -> SortMode,
     private val onDirLoaded: () -> Unit
 ) {
 
@@ -42,7 +43,7 @@ class FileBrowserController(
         recyclerView.itemAnimator = null
     }
 
-    fun loadDir(dir: File, showLoading: Boolean = true, scrollToTop: Boolean = true) {
+    fun loadDir(dir: File, showLoading: Boolean = true, scrollToTop: Boolean = true, restorePosition: Int? = null, highlightPath: String? = null) {
         loadJob?.cancel()
         loadJob = activity.lifecycleScope.launch {
             try {
@@ -51,24 +52,54 @@ class FileBrowserController(
                 currentDir = dir
                 activity.supportActionBar?.title = dir.getDisplayPath()
 
-                val items = fileLoader.loadItems(dir, showHiddenProvider())
+                val items = fileLoader.loadItems(dir, showHiddenProvider(), sortModeProvider())
 
                 if (currentCoroutineContext().isActive) {
                     currentFiles = items.drop(if (dir.parentFile != null) 1 else 0).map { it.file }
                     val (dirs, files) = fileLoader.getStats(dir)
-                    activity.supportActionBar?.subtitle = "目录: $dirs  文件: $files"
+                    activity.supportActionBar?.subtitle = "${activity.getString(R.string.dir_count_label)}: $dirs  ${activity.getString(R.string.file_count_label)}: $files"
                     updateRecentDirs(prefs, dir.absolutePath)
 
-                    adapter.submitList(items)
-                    adapter.clearHighlight()
+                    // 在 submitList 之前计算高亮位置，让 onBindViewHolder 首次绑定时
+                    // 就走"先淡入显示，再背景渐变"的动画路径。
+                    var highlightPos = -1
+                    if (highlightPath != null) {
+                        val index = currentFiles.indexOfFirst { it.absolutePath == highlightPath }
+                        if (index >= 0) {
+                            highlightPos = if (dir.parentFile != null) index + 1 else index
+                        }
+                    }
+
+                    adapter.submitList(items, highlightPos = highlightPos)
 
                     if (scrollToTop) {
                         recyclerView.post { recyclerView.scrollToPosition(0) }
-                    } else {
-                        savedScrollState?.let { state ->
-                            recyclerView.post { recyclerView.layoutManager?.onRestoreInstanceState(state) }
-                            savedScrollState = null
+                    } else if (highlightPos >= 0) {
+                        recyclerView.post {
+                            val lm = recyclerView.layoutManager as? LinearLayoutManager ?: return@post
+                            if (restorePosition != null && restorePosition >= 0 && restorePosition < adapter.itemCount) {
+                                lm.scrollToPositionWithOffset(restorePosition, 0)
+                                // 布局完成后再检查高亮项是否可见，不可见则滚动过去
+                                recyclerView.post {
+                                    val first = lm.findFirstVisibleItemPosition()
+                                    val last = lm.findLastVisibleItemPosition()
+                                    if (highlightPos < first || highlightPos > last) {
+                                        lm.scrollToPositionWithOffset(highlightPos, 0)
+                                        scrollPositions[dir.absolutePath] = highlightPos
+                                    }
+                                }
+                            } else {
+                                lm.scrollToPositionWithOffset(highlightPos, 0)
+                                scrollPositions[dir.absolutePath] = highlightPos
+                            }
                         }
+                    } else if (restorePosition != null && restorePosition >= 0 && restorePosition < adapter.itemCount) {
+                        recyclerView.post {
+                            (recyclerView.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(restorePosition, 0)
+                        }
+                    } else if (savedScrollState != null) {
+                        recyclerView.post { recyclerView.layoutManager?.onRestoreInstanceState(savedScrollState) }
+                        savedScrollState = null
                     }
 
                     onDirLoaded()
@@ -80,53 +111,28 @@ class FileBrowserController(
     }
 
     fun refresh() {
-        loadDir(currentDir, showLoading = false, scrollToTop = false)
+        saveScrollPosition()
+        val savedPos = scrollPositions[currentDir.absolutePath]
+        loadDir(currentDir, showLoading = false, scrollToTop = false, restorePosition = savedPos)
     }
 
-    fun navigateUp(onComplete: (() -> Unit)? = null) {
+    fun navigateUp() {
         val parent = currentDir.parentFile ?: return
         val childDir = currentDir
         saveScrollPosition()
-        loadDir(parent, scrollToTop = false)
-        activity.lifecycleScope.launch {
-            recyclerView.postDelayed({
-                val savedPos = scrollPositions[parent.absolutePath]
-                if (savedPos != null && savedPos >= 0 && savedPos < adapter.itemCount) {
-                    recyclerView.post {
-                        (recyclerView.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(savedPos, 0)
-                    }
-                }
-                val index = currentFiles.indexOfFirst { it.absolutePath == childDir.absolutePath }
-                if (index >= 0) {
-                    val pos = if (canUp) index + 1 else index
-                    adapter.setHighlight(pos)
-                    recyclerView.post { adapter.startBlink(pos) }
-                }
-                onComplete?.invoke()
-            }, 200)
-        }
+        val savedPos = scrollPositions[parent.absolutePath]
+        loadDir(parent, showLoading = true, scrollToTop = false, restorePosition = savedPos, highlightPath = childDir.absolutePath)
     }
 
     fun locateFile(file: File) {
         val targetDir = if (file.isDirectory) file else file.parentFile
         if (targetDir == null || !targetDir.exists()) {
-            toast(activity, "无法定位")
+            toast(activity, activity.getString(R.string.cannot_read))
             return
         }
         saveScrollPosition()
-        loadDir(targetDir, scrollToTop = false)
-        if (!file.isDirectory) {
-            recyclerView.postDelayed({
-                val index = currentFiles.indexOfFirst { it.absolutePath == file.absolutePath }
-                if (index >= 0) {
-                    val pos = if (canUp) index + 1 else index
-                    adapter.setHighlight(pos)
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    layoutManager.scrollToPositionWithOffset(pos, 0)
-                    recyclerView.post { adapter.startBlink(pos) }
-                }
-            }, 200)
-        }
+        val highlightPath = if (!file.isDirectory) file.absolutePath else null
+        loadDir(targetDir, scrollToTop = false, highlightPath = highlightPath)
     }
 
     fun saveScrollPosition() {
@@ -153,6 +159,8 @@ class FileBrowserController(
         }
         scrollPositions[currentDir.absolutePath] = targetPos
     }
+
+    fun getCurrentScrollPosition(): Int? = scrollPositions[currentDir.absolutePath]
 
     fun getCurrentFiles(): List<File> = currentFiles
     fun canNavigateUp(): Boolean = canUp

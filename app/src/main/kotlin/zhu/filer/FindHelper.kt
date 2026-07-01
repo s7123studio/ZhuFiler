@@ -6,7 +6,6 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
-import android.text.format.Formatter
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -63,7 +62,7 @@ class FindHelper(
         rootLayout.addView(inputLayout)
 
         val checkBox = AppCompatCheckBox(activity).apply {
-            text = "搜索子目录"
+            text = activity.getString(R.string.subdirectory_search)
             isChecked = true
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -73,9 +72,9 @@ class FindHelper(
         rootLayout.addView(checkBox)
 
         val searchDialog = MaterialAlertDialogBuilder(activity)
-            .setTitle("查找")
+            .setTitle(R.string.search)
             .setView(rootLayout)
-            .setPositiveButton("确定") { _, _ ->
+            .setPositiveButton(R.string.ok) { _, _ ->
                 val query = editText.text?.toString()?.trim() ?: ""
                 val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                 imm.hideSoftInputFromWindow(editText.windowToken, 0)
@@ -83,7 +82,7 @@ class FindHelper(
                     performSearch(query, checkBox.isChecked)
                 }, 80)
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
 
         focusAndShowKeyboard(editText, searchDialog)
@@ -102,15 +101,15 @@ class FindHelper(
             buildResultDialog()
         }
 
-        dialog?.setTitle("查找结果")
+        dialog?.setTitle(activity.getString(R.string.search_result))
         dialog?.setCancelable(false)
 
         progress.visibility = View.VISIBLE
         doneIcon.visibility = View.INVISIBLE
-        countText.text = "已找到 0 个"
+        countText.text = activity.getString(R.string.found_count, 0)
         countText.visibility = View.VISIBLE
         stopButton.visibility = View.VISIBLE
-        stopButton.text = "结束"
+        stopButton.text = activity.getString(R.string.stop)
         stopButton.setBackgroundColor(getThemeColor(activity, android.R.attr.colorPrimary))
         stopButton.setTextColor(Color.WHITE)
         stopButton.strokeWidth = 0
@@ -133,12 +132,8 @@ class FindHelper(
                     if (!isActive) break
 
                     if (query.isEmpty() || file.name.contains(query, ignoreCase = true)) {
-                        val timeStr = DATE_FORMAT.format(Date(file.lastModified()))
-                        val subtitle = if (file.isDirectory) timeStr else "$timeStr  ${Formatter.formatFileSize(activity, file.length())}"
-                        val iconRes = if (file.isDirectory) R.drawable.outline_folder_24 else R.drawable.outline_insert_drive_file_24
-
                         foundCount++
-                        val item = FileItem(file, file.name, iconRes, subtitle)
+                        val item = createFileItem(activity, file)
                         resultItems.add(item)
 
                         lastResultItems = resultItems.toList()
@@ -147,7 +142,7 @@ class FindHelper(
 
                         withContext(Dispatchers.Main) {
                             if (!isActive || dialog?.isShowing != true) return@withContext
-                            countText.text = "已找到 $foundCount 个"
+                            countText.text = activity.getString(R.string.found_count, foundCount)
                             adapter.addItem(item)
                             rv.isVisible = true
                         }
@@ -161,7 +156,7 @@ class FindHelper(
                 if (!isActive || dialog?.isShowing != true) return@withContext
                 progress.visibility = View.INVISIBLE
                 doneIcon.visibility = View.VISIBLE
-                stopButton.text = "已结束"
+                stopButton.text = activity.getString(R.string.done)
                 stopButton.setBackgroundColor(Color.TRANSPARENT)
                 val colorStateList = ColorStateList.valueOf(getThemeColor(activity, android.R.attr.colorPrimary))
                 stopButton.setTextColor(colorStateList)
@@ -220,7 +215,7 @@ class FindHelper(
 
         countText = TextView(activity).apply {
             textSize = 14f
-            text = "已找到 0 个"
+            text = activity.getString(R.string.found_count, 0)
             val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 leftMargin = dpToPx(activity, 12)
                 weight = 1f
@@ -234,7 +229,7 @@ class FindHelper(
         val colorStateList = ColorStateList.valueOf(primaryColor)
 
         stopButton = MaterialButton(activity).apply {
-            text = "结束"
+            text = activity.getString(R.string.stop)
             textSize = 14f
             visibility = View.GONE
             setBackgroundColor(primaryColor)
@@ -249,7 +244,7 @@ class FindHelper(
                 searchJob?.cancel()
                 progress.visibility = View.INVISIBLE
                 doneIcon.visibility = View.VISIBLE
-                text = "已结束"
+                text = activity.getString(R.string.done)
                 setBackgroundColor(Color.TRANSPARENT)
                 setTextColor(colorStateList)
                 strokeWidth = dpToPx(activity, 1)
@@ -274,7 +269,7 @@ class FindHelper(
         listContainer.addView(rv)
 
         emptyHint = TextView(activity).apply {
-            text = "未找到匹配内容"
+            text = activity.getString(R.string.no_search_result)
             textSize = 16f
             gravity = Gravity.CENTER
             visibility = View.GONE
@@ -295,15 +290,15 @@ class FindHelper(
         rv.adapter = adapter
 
         dialog = MaterialAlertDialogBuilder(activity)
-            .setTitle("查找结果")
+            .setTitle(R.string.search_result)
             .setView(root)
-            .setNegativeButton("关闭", null)
+            .setNegativeButton(R.string.close, null)
             .show()
     }
 
     fun showLastResult() {
         if (!hasResult || lastResultItems.isNullOrEmpty()) {
-            toast(activity, "暂无查找结果")
+            toast(activity, activity.getString(R.string.no_search_result))
             return
         }
 
@@ -311,12 +306,12 @@ class FindHelper(
             buildResultDialog()
         }
 
-        dialog?.setTitle("查找结果")
+        dialog?.setTitle(activity.getString(R.string.search_result))
         dialog?.setCancelable(true)
 
         progress.visibility = View.INVISIBLE
         doneIcon.visibility = View.VISIBLE
-        countText.text = "已找到 $lastFoundCount 个"
+        countText.text = activity.getString(R.string.found_count, lastFoundCount)
         countText.visibility = View.VISIBLE
         stopButton.visibility = View.GONE
         emptyHint.isVisible = false
