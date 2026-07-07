@@ -63,7 +63,7 @@ main.innerHTML = `
   <div class="section">
     <div class="container-narrow">
 
-      <div class="zf-version-badge animate-in">v1.9 · 2026年7月4日发布</div>
+      <div class="zf-version-badge animate-in">v2.1 · 2026年7月7日发布</div>
 
       <mdui-card class="zf-card animate-in delay-1" variant="filled">
         <div class="zf-button-row">

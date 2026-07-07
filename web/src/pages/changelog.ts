@@ -6,13 +6,17 @@ initLayout('changelog')
 /* 数据来源:共享模块 lib/releases.ts(与 download 页保持一致) */
 
 const COMPARE = [
-  { feat: '文件浏览', cells: [true, true, true, true] },
-  { feat: '文件操作', cells: [true, true, true, true] },
-  { feat: '代码高亮', cells: [false, true, true, true] },
-  { feat: '图片预览', cells: [false, true, true, true] },
-  { feat: '文件搜索', cells: [false, false, true, true] },
-  { feat: '书签系统', cells: [false, false, true, true] },
-  { feat: '多选操作', cells: [false, false, true, true] },
+  { feat: '文件浏览', cells: [true, true, true, true, true] },
+  { feat: '文件操作', cells: [true, true, true, true, true] },
+  { feat: '代码高亮', cells: [false, true, true, true, true] },
+  { feat: '图片预览', cells: [false, true, true, true, true] },
+  { feat: '文件搜索', cells: [false, false, true, true, true] },
+  { feat: '书签系统', cells: [false, false, true, true, true] },
+  { feat: '多选操作', cells: [false, false, true, true, true] },
+  { feat: '内联查找替换', cells: [false, false, false, false, true] },
+  { feat: '文件编码检测', cells: [false, false, false, false, true] },
+  { feat: '语言图标区分', cells: [false, false, false, false, true] },
+  { feat: 'APK安装', cells: [false, false, false, false, true] },
 ]
 
 /* ---------- 渲染 ---------- */
@@ -68,7 +72,7 @@ main.innerHTML = `
               </div>
               <div class="zf-latest-card-version">${latest.date}</div>
             </div>
-            <mdui-button href="download.html" icon="download" variant="filled">下载 v1.9</mdui-button>
+            <mdui-button href="download.html" icon="download" variant="filled">下载 v2.1</mdui-button>
           </div>
           <div class="zf-latest-card-summary">${latest.summary}</div>
           ${latest.groups.map(renderGroup).join('')}
@@ -139,7 +143,7 @@ main.innerHTML = `
       <div class="zf-table-wrap animate-in delay-1 zf-block-space">
         <table>
           <thead>
-            <tr><th>功能</th><th>v1.6</th><th>v1.7</th><th>v1.8</th><th>v1.9</th></tr>
+            <tr><th>功能</th><th>v1.6</th><th>v1.7</th><th>v1.8</th><th>v1.9</th><th>v2.1</th></tr>
           </thead>
           <tbody>
             ${COMPARE.map(

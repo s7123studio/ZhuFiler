@@ -11,7 +11,7 @@ main.innerHTML = `
       <div class="hero-content">
         <span class="hero-eyebrow animate-fade">
           <mdui-icon name="bolt"></mdui-icon>
-          开源 · 免费 · MIT 协议 · v1.9
+          开源 · 免费 · MIT 协议 · v2.1
         </span>
         <h1 class="hero-title animate-in">烛文件</h1>
         <p class="hero-subtitle animate-in delay-1">
@@ -104,8 +104,8 @@ main.innerHTML = `
       <div class="grid grid-auto-sm">
         <mdui-card class="stat-card animate-scale delay-1" variant="elevated">
           <mdui-icon name="schedule"></mdui-icon>
-          <div class="stat-value">v1.9</div>
-          <div class="stat-label">最新版本 · 2026年7月4日</div>
+          <div class="stat-value">v2.1</div>
+          <div class="stat-label">最新版本 · 2026年7月7日</div>
           <mdui-button href="download.html" variant="tonal" class="stat-card-btn">下载</mdui-button>
         </mdui-card>
         <mdui-card class="stat-card animate-scale delay-2" variant="elevated">
@@ -136,7 +136,7 @@ main.innerHTML = `
         <h2>准备好体验了吗?</h2>
         <p>免费下载 · MIT 协议 · 持续更新</p>
         <div class="cta-actions">
-          <mdui-button href="download.html" icon="download" variant="filled">下载 v1.9</mdui-button>
+          <mdui-button href="download.html" icon="download" variant="filled">下载 v2.1</mdui-button>
           <mdui-button href="https://github.com/Artzhu86/ZhuFiler" target="_blank" rel="noopener" icon="star" variant="outlined">Star on GitHub</mdui-button>
         </div>
       </div>

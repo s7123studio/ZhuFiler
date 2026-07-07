@@ -30,9 +30,49 @@ export type Release = {
 /* ---------- 完整发布历史(从新到旧) ---------- */
 const RELEASES: Release[] = [
   {
+    value: 'v2.1',
+    date: 'v2.1 · 2026年7月7日',
+    latest: true,
+    summary: '新增 6 项 · 改进 3 项 · 修复 2 项',
+    groups: [
+      {
+        icon: 'star',
+        title: '新功能',
+        tone: 'tertiary',
+        items: [
+          '代码编辑器：内联查找替换栏（替代对话框）',
+          '代码编辑器：工具栏图标按钮（查找/保存/撤销/重做）',
+          '代码编辑器：Tab键按设置的缩进大小插入空格',
+          '代码编辑器：文件编码自动检测与显示',
+          'APK文件显示真实应用名称和图标',
+          'APK文件点击触发系统安装器',
+        ],
+      },
+      {
+        icon: 'check_circle',
+        title: '改进',
+        tone: 'primary',
+        items: [
+          '代码文件按语言显示独立图标（Java/Kotlin/Python/JS等11种）',
+          '文件列表图标颜色跟随主题适配深色/浅色模式',
+          '主题切换时保留编辑器未保存内容',
+        ],
+      },
+      {
+        icon: 'bug_report',
+        title: '修复',
+        tone: 'primary',
+        items: [
+          '修复APK安装需要安装未知应用权限的检查',
+          '修复查找替换后匹配位置未刷新的问题',
+        ],
+      },
+    ],
+  },
+  {
     value: 'v1.9',
     date: 'v1.9 · 2026年7月4日',
-    latest: true,
+    latest: false,
     summary: '修复 3 项 · 改进 4 项',
     groups: [
       {
@@ -111,14 +151,14 @@ export type Plan = { version: string; tone: 'primary' | 'tertiary'; items: strin
 
 export const PLANS: Plan[] = [
   {
-    version: 'v1.10 计划中',
+    version: 'v2.2 计划中',
     tone: 'primary',
-    items: ['更多文件格式支持', '云端同步功能', '性能优化'],
+    items: ['文件编码切换功能', '更多语言图标支持', '性能优化'],
   },
   {
-    version: 'v2.0 规划中',
+    version: 'v3.0 规划中',
     tone: 'tertiary',
-    items: ['Material You 动态颜色', '更多手势操作', '插件系统'],
+    items: ['插件系统', '云端同步功能', '更多手势操作'],
   },
 ]
 
