@@ -41,6 +41,8 @@ class TextEditorActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_FILE_PATH = "extra_file_path"
+        private const val STATE_CONTENT = "state_content"
+        private const val STATE_MODIFIED = "state_modified"
     }
 
     private lateinit var binding: ActivityTextEditorBinding
@@ -121,16 +123,29 @@ class TextEditorActivity : AppCompatActivity() {
 
         applySettings()
 
+        val savedContent = savedInstanceState?.getString(STATE_CONTENT)
+        val wasModified = savedInstanceState?.getBoolean(STATE_MODIFIED) ?: false
+
         lifecycleScope.launch {
-            val content = withContext(Dispatchers.IO) {
-                runCatching {
-                    detectedEncoding = detectEncoding(file)
-                    val charset = charset(detectedEncoding)
-                    file.bufferedReader(charset).use { it.readText() }
-                }.getOrDefault(getString(R.string.read_failed))
+            val content = if (savedContent != null) {
+                savedContent
+            } else {
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        detectedEncoding = detectEncoding(file)
+                        val charset = charset(detectedEncoding)
+                        file.bufferedReader(charset).use { it.readText() }
+                    }.getOrDefault(getString(R.string.read_failed))
+                }
             }
 
-            initialContent = content
+            initialContent = if (wasModified && savedContent != null) savedContent
+                else withContext(Dispatchers.IO) {
+                    runCatching {
+                        val charset = charset(detectedEncoding)
+                        file.bufferedReader(charset).use { it.readText() }
+                    }.getOrDefault("")
+                }
             binding.editor.setText(content)
 
             binding.editor.subscribeAlways(ContentChangeEvent::class.java) {
@@ -140,6 +155,14 @@ class TextEditorActivity : AppCompatActivity() {
             binding.editor.subscribeAlways(SelectionChangeEvent::class.java) {
                 updateSubtitle()
             }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::binding.isInitialized) {
+            outState.putString(STATE_CONTENT, binding.editor.text.toString())
+            outState.putBoolean(STATE_MODIFIED, isModified)
         }
     }
 
