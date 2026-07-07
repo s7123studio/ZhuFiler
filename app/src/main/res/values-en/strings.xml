@@ -111,4 +111,25 @@
     <string name="compress_success">Compression successful</string>
     <string name="compress_failed">Compression failed</string>
     <string name="wrong_password">Wrong password</string>
+    <string name="find">Find</string>
+    <string name="replace">Replace</string>
+    <string name="find_next">Next</string>
+    <string name="find_previous">Previous</string>
+    <string name="replace_all">Replace All</string>
+    <string name="regex">Regex</string>
+    <string name="case_sensitive">Case sensitive</string>
+    <string name="whole_word">Whole word</string>
+    <string name="no_match">No match</string>
+    <string name="match_count">Found %d matches</string>
+    <string name="settings">Settings</string>
+    <string name="font_size">Font size</string>
+    <string name="tab_size">Tab size</string>
+    <string name="auto_save">Auto save</string>
+    <string name="show_line_numbers">Show line numbers</string>
+    <string name="word_wrap">Word wrap</string>
+    <string name="highlight_line">Highlight current line</string>
+    <string name="theme">Theme</string>
+    <string name="encoding">Encoding</string>
+    <string name="indent_with_spaces">Indent with spaces</string>
+    <string name="fold_code">Code folding</string>
 </resources>

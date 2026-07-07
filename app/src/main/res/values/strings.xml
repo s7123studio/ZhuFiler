@@ -113,4 +113,25 @@
     <string name="compress_success">压缩成功</string>
     <string name="compress_failed">压缩失败</string>
     <string name="wrong_password">密码错误</string>
+    <string name="find">查找</string>
+    <string name="replace">替换</string>
+    <string name="find_next">下一个</string>
+    <string name="find_previous">上一个</string>
+    <string name="replace_all">全部替换</string>
+    <string name="regex">正则</string>
+    <string name="case_sensitive">区分大小写</string>
+    <string name="whole_word">全字匹配</string>
+    <string name="no_match">无匹配结果</string>
+    <string name="match_count">找到 %d 个匹配</string>
+    <string name="settings">设置</string>
+    <string name="font_size">字体大小</string>
+    <string name="tab_size">Tab宽度</string>
+    <string name="auto_save">自动保存</string>
+    <string name="show_line_numbers">显示行号</string>
+    <string name="word_wrap">自动换行</string>
+    <string name="highlight_line">高亮当前行</string>
+    <string name="theme">主题</string>
+    <string name="encoding">编码</string>
+    <string name="indent_with_spaces">使用空格缩进</string>
+    <string name="fold_code">代码折叠</string>
 </resources>

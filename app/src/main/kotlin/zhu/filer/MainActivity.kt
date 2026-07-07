@@ -75,6 +75,8 @@ class MainActivity : AppCompatActivity() {
             window.statusBarColor = Color.TRANSPARENT
         }
 
+        requestHighRefreshRate()
+
         initViews()
         setupSwipeRefresh()
         prefs = getSharedPreferences("filer_prefs", MODE_PRIVATE)
@@ -208,7 +210,19 @@ class MainActivity : AppCompatActivity() {
         }
         return result
     }
-    
+
+    @Suppress("DEPRECATION")
+    private fun requestHighRefreshRate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val display = windowManager.defaultDisplay ?: return
+            val modes = display.supportedModes
+            val highRefreshMode = modes.maxByOrNull { it.refreshRate } ?: return
+            val params = window.attributes
+            params.preferredDisplayModeId = highRefreshMode.modeId
+            window.attributes = params
+        }
+    }
+
     private fun setupRecyclerView() {
         adapter = FileListAdapter(
             onItemClick = { file, pos ->
@@ -654,11 +668,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun performCompress(sources: List<File>, outputFile: File, format: CompressFormat, password: String?) {
+        val (progressDialog, updateProgress) = createCompressProgressDialog(this)
+        progressDialog.show()
+
         lifecycleScope.launch {
-            progressBar.isVisible = true
             try {
                 val success = withContext(Dispatchers.IO) {
-                    ArchiveEngine.createArchive(outputFile, sources, browserController.currentDir, format, password)
+                    ArchiveEngine.createArchive(outputFile, sources, browserController.currentDir, format, password) { current, total, fileName ->
+                        runOnUiThread { updateProgress(current, total, fileName) }
+                    }
                 }
                 if (success) {
                     toast(this@MainActivity, getString(R.string.compress_success))
@@ -669,7 +687,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 toast(this@MainActivity, getString(R.string.compress_failed))
             } finally {
-                progressBar.isVisible = false
+                progressDialog.dismiss()
             }
         }
     }

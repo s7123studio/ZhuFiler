@@ -34,6 +34,7 @@ object CodeEditorTextMate {
         "js" to "source.js",
         "md" to "text.html.markdown",
         "json" to "source.json",
+        "jsonc" to "source.json.comments",
         "css" to "source.css",
         "c" to "source.c",
         "h" to "source.c",
