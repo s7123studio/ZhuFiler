@@ -4,9 +4,11 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.view.Display
 import android.view.Menu
 import android.view.MenuItem
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
@@ -86,6 +88,8 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightStatusBars = !isDark
             isAppearanceLightNavigationBars = !isDark
         }
+
+        setupHighRefreshRate()
 
         initViews()
         setupSwipeRefresh()
@@ -214,6 +218,24 @@ class MainActivity : AppCompatActivity() {
 
         toolbar.post {
             toolbarScrollerController.onToolbarReady()
+        }
+    }
+
+    // 设置高刷新率
+    private fun setupHighRefreshRate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                display
+            } else {
+                val windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+                @Suppress("DEPRECATION")
+                windowManager.defaultDisplay
+            } ?: return
+            val supportedModes = display.supportedModes
+            if (supportedModes.isNotEmpty()) {
+                val maxRefreshRateMode = supportedModes.maxByOrNull { it.refreshRate } ?: return
+                window.attributes.preferredDisplayModeId = maxRefreshRateMode.modeId
+            }
         }
     }
 

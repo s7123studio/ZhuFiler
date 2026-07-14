@@ -16,3 +16,7 @@ dist
 
 # Web build output
 web/dist
+
+# Android Studio
+.idea
+local.properties

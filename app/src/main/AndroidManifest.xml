@@ -15,6 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:requestLegacyExternalStorage="true"
+        android:hardwareAccelerated="true"
         tools:targetApi="29">
 
         <provider

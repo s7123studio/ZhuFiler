@@ -86,6 +86,9 @@ class FileBrowserController(
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(activity)
         recyclerView.itemAnimator = null
+        recyclerView.setHasFixedSize(true)
+        recyclerView.setItemViewCacheSize(20)
+        recyclerView.overScrollMode = RecyclerView.OVER_SCROLL_NEVER
     }
 
     // 加载目录
